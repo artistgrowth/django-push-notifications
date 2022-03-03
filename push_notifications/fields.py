@@ -3,7 +3,6 @@ import struct
 from django import forms
 from django.core.validators import RegexValidator
 from django.db import connection, models
-from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -54,7 +53,7 @@ class HexadecimalField(forms.CharField):
 
 	def prepare_value(self, value):
 		# converts bigint from db to hex before it is displayed in admin
-		if value and not isinstance(value, six.string_types) \
+		if value and not isinstance(value, str) \
 			and connection.vendor in ("mysql", "sqlite"):
 			value = _unsigned_integer_to_hex_string(value)
 		return super(forms.CharField, self).prepare_value(value)

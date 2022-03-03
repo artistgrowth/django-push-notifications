@@ -1,5 +1,6 @@
 from django.apps import apps
 from django.contrib import admin, messages
+from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
 from .apns import APNSServerError
@@ -44,7 +45,7 @@ class DeviceAdmin(admin.ModelAdmin):
 			except APNSServerError as e:
 				errors.append(e.status)
 			except WebPushError as e:
-				errors.append(e.message)
+				errors.append(force_text(e))
 
 			if bulk:
 				break
@@ -61,6 +62,8 @@ class DeviceAdmin(admin.ModelAdmin):
 			except TypeError:
 				for entry in ret[0][0]:
 					errors = errors + [r["error"] for r in entry["results"] if "error" in r]
+			except IndexError:
+				pass
 		if errors:
 			self.message_user(
 				request, _("Some messages could not be processed: %r" % (", ".join(errors))),
