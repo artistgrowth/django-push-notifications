@@ -7,8 +7,9 @@ import uuid
 
 
 def migrate_device_id(apps, schema_editor):
+    alias = schema_editor.connection.alias
     GCMDevice = apps.get_model("push_notifications", "GCMDevice")
-    for device in GCMDevice.objects.filter(device_id__isnull=False):
+    for device in GCMDevice.objects.using(alias).filter(device_id__isnull=False):
         # previously stored as an unsigned integer
         device.device_uuid = uuid.UUID(int=device.device_id)
         device.save()
