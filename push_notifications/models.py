@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
@@ -13,6 +13,7 @@ BROWSER_TYPES = (
 	("CHROME", "Chrome"),
 	("FIREFOX", "Firefox"),
 	("OPERA", "Opera"),
+	("EDGE", "Edge")
 )
 
 
@@ -55,7 +56,7 @@ class GCMDeviceManager(models.Manager):
 
 class GCMDeviceQuerySet(models.query.QuerySet):
 	def send_message(self, message, **kwargs):
-		if self:
+		if self.exists():
 			from .gcm import send_message as gcm_send_message
 
 			data = kwargs.pop("extra", {})
@@ -120,7 +121,7 @@ class APNSDeviceManager(models.Manager):
 
 class APNSDeviceQuerySet(models.query.QuerySet):
 	def send_message(self, message, creds=None, **kwargs):
-		if self:
+		if self.exists():
 			from .apns import apns_send_bulk_message
 
 			app_ids = self.filter(active=True).order_by("application_id")\
@@ -144,7 +145,7 @@ class APNSDeviceQuerySet(models.query.QuerySet):
 class APNSDevice(Device):
 	device_id = models.UUIDField(
 		verbose_name=_("Device ID"), blank=True, null=True, db_index=True,
-		help_text="UDID / UIDevice.identifierForVendor()"
+		help_text=_("UUID / UIDevice.identifierForVendor()")
 	)
 	registration_id = models.CharField(
 		verbose_name=_("Registration ID"), max_length=200, unique=SETTINGS["UNIQUE_REG_ID"]
@@ -239,7 +240,7 @@ class WebPushDevice(Device):
 	browser = models.CharField(
 		verbose_name=_("Browser"), max_length=10,
 		choices=BROWSER_TYPES, default=BROWSER_TYPES[0][0],
-		help_text=_("Currently only support to Chrome, Firefox and Opera browsers")
+		help_text=_("Currently only support to Chrome, Firefox, Edge and Opera browsers")
 	)
 	objects = WebPushDeviceManager()
 

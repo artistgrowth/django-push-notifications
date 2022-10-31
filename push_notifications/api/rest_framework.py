@@ -1,11 +1,31 @@
 from rest_framework import permissions, status
+from rest_framework.fields import IntegerField
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer, Serializer, ValidationError
 from rest_framework.viewsets import ModelViewSet
 
-from ..fields import hex_re
+from ..fields import UNSIGNED_64BIT_INT_MAX_VALUE, hex_re
 from ..models import APNSDevice, GCMDevice, WebPushDevice, WNSDevice
 from ..settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
+
+
+# Fields
+class HexIntegerField(IntegerField):
+	"""
+	Store an integer represented as a hex string of form "0x01".
+	"""
+
+	def to_internal_value(self, data):
+		# validate hex string and convert it to the unsigned
+		# integer representation for internal use
+		try:
+			data = int(data, 16) if type(data) != int else data
+		except ValueError:
+			raise ValidationError("Device ID is not a valid hex number")
+		return super(HexIntegerField, self).to_internal_value(data)
+
+	def to_representation(self, value):
+		return value
 
 
 # Serializers
@@ -68,6 +88,13 @@ class UniqueRegistrationSerializerMixin(Serializer):
 
 
 class GCMDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
+	device_id = HexIntegerField(
+		help_text="ANDROID_ID / TelephonyManager.getDeviceId() (e.g: 0x01)",
+		style={"input_type": "text"},
+		required=False,
+		allow_null=True
+	)
+
 	class Meta(DeviceSerializerMixin.Meta):
 		model = GCMDevice
 		fields = (
@@ -75,6 +102,12 @@ class GCMDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
 			"cloud_message_type", "application_id",
 		)
 		extra_kwargs = {"id": {"read_only": False, "required": False}}
+
+	def validate_device_id(self, value):
+		# device ids are 64 bit unsigned values
+		if value > UNSIGNED_64BIT_INT_MAX_VALUE:
+			raise ValidationError("Device ID is out of range")
+		return value
 
 
 class WNSDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
@@ -99,15 +132,15 @@ class IsOwner(permissions.BasePermission):
 
 
 # Mixins
-class DeviceViewSetMixin(object):
+class DeviceViewSetMixin:
 	lookup_field = "registration_id"
 
 	def create(self, request, *args, **kwargs):
 		serializer = None
 		is_update = False
-		if SETTINGS.get("UPDATE_ON_DUPLICATE_REG_ID") and "registration_id" in request.data:
+		if SETTINGS.get("UPDATE_ON_DUPLICATE_REG_ID") and self.lookup_field in request.data:
 			instance = self.queryset.model.objects.filter(
-				registration_id=request.data["registration_id"]
+				registration_id=request.data[self.lookup_field]
 			).first()
 			if instance:
 				serializer = self.get_serializer(instance, data=request.data)
@@ -135,7 +168,7 @@ class DeviceViewSetMixin(object):
 		return super(DeviceViewSetMixin, self).perform_update(serializer)
 
 
-class AuthorizedMixin(object):
+class AuthorizedMixin:
 	permission_classes = (permissions.IsAuthenticated, IsOwner)
 
 	def get_queryset(self):
