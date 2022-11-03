@@ -88,12 +88,12 @@ class UniqueRegistrationSerializerMixin(Serializer):
 
 
 class GCMDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
-	device_id = HexIntegerField(
-		help_text="ANDROID_ID / TelephonyManager.getDeviceId() (e.g: 0x01)",
-		style={"input_type": "text"},
-		required=False,
-		allow_null=True
-	)
+	# device_id = HexIntegerField(
+	# 	help_text="ANDROID_ID / TelephonyManager.getDeviceId() (e.g: 0x01)",
+	# 	style={"input_type": "text"},
+	# 	required=False,
+	# 	allow_null=True
+	# )
 
 	class Meta(DeviceSerializerMixin.Meta):
 		model = GCMDevice
@@ -103,11 +103,11 @@ class GCMDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
 		)
 		extra_kwargs = {"id": {"read_only": False, "required": False}}
 
-	def validate_device_id(self, value):
-		# device ids are 64 bit unsigned values
-		if value > UNSIGNED_64BIT_INT_MAX_VALUE:
-			raise ValidationError("Device ID is out of range")
-		return value
+	# def validate_device_id(self, value):
+	# 	# device ids are 64 bit unsigned values
+	# 	if value > UNSIGNED_64BIT_INT_MAX_VALUE:
+	# 		raise ValidationError("Device ID is out of range")
+	# 	return value
 
 
 class WNSDeviceSerializer(UniqueRegistrationSerializerMixin, ModelSerializer):
